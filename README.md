@@ -14,6 +14,6 @@ Rebera runs on Linux and uses [x264](http://www.videolan.org/developers/x264.htm
 
 <code>sudo apt-get install libavformat-dev libavcodec-dev libavutil-dev libsdl2-dev</code>
 
-We specifically left the x264 library out, because the source code needs to be modified so as to generate an AVC stream with hierarchical-P coding structure with 3 temporal layers. You can download the source code [here](ftp://ftp.videolan.org/pub/x264/snapshots/last_x264.tar.bz2). To find out how we modify the source code, follow [this blog post](https://eymenkurdoglu.github.io/2016/07/01/hierp-one.html). Then you can configure, make and install as usual.
+We specifically left the x264 library out, because the source code needs to be modified so as to generate an AVC stream with hierarchical-P coding structure with 3 temporal layers. You can download the source code [here](http://bit.ly/299X9wU). To find out how we modify the source code, follow [this blog post](https://eymenkurdoglu.github.io/2016/07/01/hierp-one.html). Then you can configure, make and install as usual.
 
 
