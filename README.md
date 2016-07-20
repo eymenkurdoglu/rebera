@@ -10,4 +10,10 @@ This research was done in collaboration with Tencent Inc. ([WeChat International
 
 ## Reproducing our results
 
-Rebera runs on Linux and uses [x264](http://www.videolan.org/developers/x264.html) library for H.264/AVC video encoding, [ffmpeg](http://ffmpeg.org/) library for decoding, and [SDL2.0](https://www.libsdl.org/download-2.0.php) library for video display purposes, so you need to download these first. The x264 library is modified to generate an AVC stream with hierarchical-P coding structure with 3 temporal layers, click [here](https://eymenkurdoglu.github.io/2016/07/01/hierp-one.html) to find out how.
+Rebera runs on Linux and uses [x264](http://www.videolan.org/developers/x264.html) library for H.264/AVC video encoding, [ffmpeg](http://ffmpeg.org/) library for decoding, and [SDL2.0](https://www.libsdl.org/download-2.0.php) library for video display purposes, so you need to download these first. 
+
+<code>sudo apt-get install libavformat-dev libavcodec-dev libavutil-dev libsdl2-dev</code>
+
+We specifically left the x264 library out, because the source code needs to be modified so as to generate an AVC stream with hierarchical-P coding structure with 3 temporal layers. You can download the source code [here](http://bit.ly/299X9wU). To find out how we modify the source code, follow [this blog post](https://eymenkurdoglu.github.io/2016/07/01/hierp-one.html). Then you can configure, make and install as usual.
+
+
