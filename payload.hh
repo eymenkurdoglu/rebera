@@ -21,12 +21,12 @@ public:
 		uint8_t  numpackets; // 1, in this frame
 		uint32_t sentsofar; // 4
 
-		Header( uint8_t n, uint16_t f ) :
-			sendingtime( 0 ),
-			sequencenum( 0 ),
-			framenumber( f ),
-			packetindex( 0 ),
-			numpackets ( n )
+		Header( uint8_t n, uint16_t f )
+		: sendingtime( 0 )
+		, sequencenum( 0 )
+		, framenumber( f )
+		, packetindex( 0 )
+		, numpackets ( n )
 		{}
 
 		std::string GetHeader( uint32_t _s_, uint8_t _ix_, uint32_t _sofar_ ) {		

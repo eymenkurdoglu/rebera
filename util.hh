@@ -8,7 +8,7 @@
 
 #define RBR_START_RLS 15
 #define RBR_RUNNING_PERC_LEN 30
-#define RBR_RUNNING_PERC 0.1
+#define RBR_RUNNING_PERC 0.05
 
 uint64_t GetTimeNow( void );
 
@@ -66,29 +66,21 @@ class Predictor {
 private:
 
 	Rls* rls;
-
-	int step = 0;
-
-	/* running estimates of the a priori prediction error statistics */
-	double errvar = 0;
-	double errmean = 0;
-	double sqerrmean = 0;
-	double fivepercerror = 0;
-	double forecast = 0;
-
 	std::list<double> errors;
+	
+	int    step 	  = 0;
+	double percentile = 1;
+	double forecast   = 0;
 
 public:
 
 	Predictor( int _M_, double _lambda_ ) { rls = new Rls( _M_, _lambda_ ); };
 	~Predictor() { delete rls; };
 
-	double fiveperc( double );
+	double running_percentile( double, double );
 	double update( double );
 
-	double get_errorstd ( void ) { return sqrt( errvar ); };
 	double get_lastforecast ( void ) { return forecast; };
-	double get_fiveperc( void ) { return fivepercerror; };
 };
 
 #endif

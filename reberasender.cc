@@ -17,9 +17,6 @@ extern "C" {
 #include "encoder.hh"
 }
 
-#define RBR_MIN_ENCODING_RATE 300
-#define RBR_MAX_ENCODING_RATE 3000
-
 /* Ctrl-C handler */
 static volatile int b_ctrl_c = 0;
 
@@ -30,25 +27,31 @@ static void sigint_handler( int a )
 
 int main ( int argc, char* argv[] )
 {
+	if ( argc != 3 ) {
+		printf("Usage: %s [REMOTE_IP] [INTERFACE]", argv[0]);
+		return -1;
+	}
+	
 	signal( SIGINT, sigint_handler );
 
-	//char camdevice[] = "/dev/video0";
-
-	FILE* pAck = fopen( "/home/eymen/Desktop/ack.txt", "wb" );
-
-	uint64_t start = 0;
-	int i_frame_count = 0;
+	//uint64_t start = 0;
 	SDL_Event evt;
-
-	v4l2capture vidcap( argv[1] );
-	x264encoder encode( vidcap.get_width(), vidcap.get_height() );
-	SenderState sender( argv[2], argv[3], NULL );
+	
+	char device[] = "/dev/video1"; // TODO: present options to the user
+	v4l2capture vidcap( device );
+	
+	x264encoder encoder( vidcap.get_width(), vidcap.get_height() );
+	encoder.attach_camera( &vidcap );
+	encoder.reduce_fr_by( 1 );
+	
+	SenderState sender( argv[1], argv[2], NULL );
+	sender.set_ipr( encoder.get_ipr() );
 
 	/* start capturing */
-	vidcap.set_picbuff( &encode );
+	vidcap.set_picbuff( encoder.get_Ybuff(), encoder.get_Cbbuff(), encoder.get_Crbuff() );
 	vidcap.start_capturing();
 
-	/* we capture events (arrival of acks, feedback packets, or new frames) using select */
+	/* we catch events (arrival of acks, feedback packets, or new frames) using select */
 	Select &sel = Select::get_instance();
 	sel.add_fd( sender.socket.get_sock() );
 	sel.add_fd( sender.acksocket.get_sock() );
@@ -62,61 +65,12 @@ int main ( int argc, char* argv[] )
 				case SDL_QUIT :
 					b_ctrl_c = 1;
 					goto EXIT;
-			/*	case SDL_WINDOWEVENT :
-					switch (evt.window.event) {
-					case SDL_WINDOWEVENT_SHOWN:
-						SDL_Log("Window %d shown", evt.window.windowID);
-						break;
-					case SDL_WINDOWEVENT_HIDDEN:
-						SDL_Log("Window %d hidden", evt.window.windowID);
-						break;
-					case SDL_WINDOWEVENT_EXPOSED:
-						SDL_Log("Window %d exposed", evt.window.windowID);
-						break;
-					case SDL_WINDOWEVENT_MOVED:
-						SDL_Log("Window %d moved to %d,%d", evt.window.windowID, evt.window.data1, evt.window.data2);
-						break;
-					case SDL_WINDOWEVENT_RESIZED:
-						SDL_Log("Window %d resized to %dx%d", evt.window.windowID, evt.window.data1, evt.window.data2);
-						break;
-					case SDL_WINDOWEVENT_SIZE_CHANGED:
-						SDL_Log("Window %d size changed to %dx%d", evt.window.windowID, evt.window.data1, evt.window.data2);
-						break;
-					case SDL_WINDOWEVENT_MINIMIZED:
-						SDL_Log("Window %d minimized", evt.window.windowID);
-						break;
-					case SDL_WINDOWEVENT_MAXIMIZED:
-						SDL_Log("Window %d maximized", evt.window.windowID);
-						break;
-					case SDL_WINDOWEVENT_RESTORED:
-						SDL_Log("Window %d restored", evt.window.windowID);
-						break;
-					case SDL_WINDOWEVENT_ENTER:
-						SDL_Log("Mouse entered window %d", evt.window.windowID);
-						break;
-					case SDL_WINDOWEVENT_LEAVE:
-						SDL_Log("Mouse left window %d", evt.window.windowID);
-						break;
-					case SDL_WINDOWEVENT_FOCUS_GAINED:
-						SDL_Log("Window %d gained keyboard focus", evt.window.windowID);
-						break;
-					case SDL_WINDOWEVENT_FOCUS_LOST:
-						SDL_Log("Window %d lost keyboard focus", evt.window.windowID);
-						break;
-					case SDL_WINDOWEVENT_CLOSE:
-						SDL_Log("Window %d closed", evt.window.windowID);
-						break;
-					default:
-						SDL_Log("Window %d got unknown event %d", evt.window.windowID, evt.window.event);
-						break;
-					}
-					break; */
 				default :
 					break;
 			}
 		}
 
-		if ( !start ) start = GetTimeNow();
+		//if ( !start ) start = GetTimeNow();
 
 		if ( !b_ctrl_c ) sel.select( -1 );
 
@@ -124,15 +78,15 @@ int main ( int argc, char* argv[] )
 		{
 			Socket::Packet incoming( sender.socket.recv() );
 			Packet::FbHeader* h = (Packet::FbHeader*)incoming.payload.data();
-			sender.set_fb_time( GetTimeNow() );
 
-			if ( h->measuredtime > 100 || ( h->measuredbyte == 0 && h->measuredtime == 0 ) )
-			{
-				sender.set_valid_time();
+			//if ( h->measuredtime > 100 || ( h->measuredbyte == 0 && h->measuredtime == 0 ) )
+			//{
+				sender.set_fb_time( GetTimeNow() );
 				sender.set_B( static_cast<double>(h->measuredbyte) ); // in bytes
 				sender.set_T( static_cast<double>(h->measuredtime) ); // in microseconds
-			}
-			else printf( "!! T = %lu, B = %lu !!\n", h->measuredtime, h->measuredbyte );
+			//}
+			
+			//printf( "T = %lu, B = %lu \n", h->measuredtime, h->measuredbyte );
 
 			if ( (uint32_t)(h->bytes_rcvd) > sender.get_bytes_recv() )
 				sender.set_bytes_recv( (uint32_t)(h->bytes_rcvd) );
@@ -141,59 +95,39 @@ int main ( int argc, char* argv[] )
 		else if ( sel.read( sender.acksocket.get_sock() ) ) /* incoming ack awaiting */
 		{
 			Socket::Packet incoming( sender.acksocket.recv() );
-			Packet::Header* pHeader = (Packet::Header*)incoming.payload.data();
-
-			/* log acks to measure 1-way delays */
-			fprintf( pAck, "%lu %u %u\n", GetTimeNow()-pHeader->sendingtime,
-										  pHeader->sequencenum,
-										  pHeader->framenumber );
+			//Packet::Header* pHeader = (Packet::Header*)incoming.payload.data();
 		}
-		else /* new frame awaiting */
+		else /* new raw picture awaiting */
 		{
-			/* get the yuv picture and copy that to encoder's pic_in */
-			if ( vidcap.read_frame() < 0 ) {
-				fprintf( stderr, "> Rebera error: unable to read raw picture\n" );
-				b_ctrl_c = 1;
-			}
-
-			int rate_cap = 0, budget = 0;
-			unsigned i_poc = i_frame_count % RBR_INTRAPERIOD;
-
-			if ( i_poc == 0 ) // IDR frame: time to make a prediction
+			/* get the next eligible raw picture and copy to encoder's pic_in */
+			if ( encoder.get_frame() )
 			{
-				budget = sender.predict_next();
-				rate_cap = 0.9*0.008*budget/(16/15);
+				if ( !encoder.get_frame_index() ) // IDR frame: time to make a prediction
+				{
+					sender.predict_next();
+					encoder.change_bitrate( 0.008*sender.get_budget() / encoder.get_ipr() );
+				}
 
-				if ( rate_cap < RBR_MIN_ENCODING_RATE )
-					rate_cap = RBR_MIN_ENCODING_RATE;
-				else if ( rate_cap > RBR_MAX_ENCODING_RATE )
-					rate_cap = RBR_MAX_ENCODING_RATE;
+				/* encode the picture */
+				int i_frame_size = encoder.compress_frame();
+				
+				int i_total_size = sender.total_length( i_frame_size );
 
-				if ( encode.change_bitrate( rate_cap ) < 0 )
-					printf( "> Rebera error: x264 encoding bitrate could not be set\n" );
+				if ( !encoder.get_frame_index() )
+					sender.init_rate_adapter( sender.get_budget() < i_total_size && sender.get_inqueue() == 0 ? i_total_size : sender.get_budget() );
+					
+				if ( sender.rate_adapter.permits( i_total_size, encoder.get_frame_index() ) )
+				{	
+					std::string frame( (const char*)encoder.get_nal(), (size_t)i_frame_size );
+					
+					sender.send_frame( frame.data(), i_frame_size, encoder.i_enc_frame );
+				}
+				encoder.i_enc_frame++;
 			}
-
-			/* encode the picture */
-			int i_frame_size = encode.encode_frame();
-			int i_total_size = sender.total_length( i_frame_size );
-
-			if ( i_poc == 0 ) {
-				if ( sender.get_inqueue() == 0 )
-					budget = budget < i_total_size ? i_total_size : budget;
-				sender.init_rate_adapter( budget );
-			}
-
-			if ( sender.rate_adapter.permits( i_total_size, i_poc ) ) {
-				std::string frame( (const char*)encode.get_nal(), (size_t)i_frame_size );
-				sender.send_frame( frame.data(), i_frame_size, i_frame_count );
-			}
-
-			i_frame_count++;
 		}
 	}
 EXIT:
 	vidcap.stop_capturing();
-	fclose( pAck );
 
 return 0;
 }

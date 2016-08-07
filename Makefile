@@ -3,11 +3,11 @@
 # https://www.cs.duke.edu/courses/cps108/doc/makefileinfo/sample.html
 # http://www.cs.colby.edu/maxwell/courses/tutorials/maketutor/
 
-common_obj = socket.o util.o select.o
-sender_obj = dfs.o encoder.o senderstate.o v4l2.o
-receiver_obj = videostate.o receiverstate.o
-executables = rbr-send rbr-recv rbr-yuvsend
-x264_dir = /home/eymen/x264
+common_obj=socket.o util.o select.o
+sender_obj=dfs.o encoder.o senderstate.o v4l2.o
+receiver_obj=videostate.o receiverstate.o
+executables=rbr-send rbr-recv rbr-yuvsend
+x264_dir=$(HOME)/Source/x264
 dest = bin/
 
 CXX = g++
@@ -46,10 +46,10 @@ v4l2.o : v4l2.cc v4l2.hh encoder.cc encoder.hh
 	$(CXX) $(CXXFLAGS) -c v4l2.cc $(LDFLAGS)
 
 rbr-send : reberasender.cc senderstate.hh encoder.hh v4l2.hh dfs.hh socket.hh payload.hh util.hh select.h
-	$(CXX) $(CXXFLAGS) -o $(dest)rbr-send reberasender.cc $(common_obj) $(sender_obj) $(LDFLAGS) $(LDLIBS)
+	$(CXX) $(CXXFLAGS) -o rbr-send reberasender.cc $(common_obj) $(sender_obj) $(LDFLAGS) $(LDLIBS)
 
 rbr-recv : reberareceiver.cc receiverstate.hh videostate.hh socket.hh payload.hh util.hh select.h
-	$(CXX) $(CXXFLAGS) -o $(dest)rbr-recv reberareceiver.cc $(common_obj) $(receiver_obj) $(LDFLAGS) $(LDLIBS)
+	$(CXX) $(CXXFLAGS) -o rbr-recv reberareceiver.cc $(common_obj) $(receiver_obj) $(LDFLAGS) $(LDLIBS)
 
-rbr-yuvsend : yuvsender.cc senderstate.hh encoder.hh v4l2.hh dfs.hh socket.hh payload.hh util.hh select.h
-	$(CXX) $(CXXFLAGS) -o $(dest)rbr-yuvsend yuvsender.cc $(common_obj) $(sender_obj) $(LDFLAGS) $(LDLIBS)
+#rbr-yuvsend : yuvsender.cc senderstate.hh encoder.hh v4l2.hh dfs.hh socket.hh payload.hh util.hh select.h
+#	$(CXX) $(CXXFLAGS) -o rbr-yuvsend yuvsender.cc $(common_obj) $(sender_obj) $(LDFLAGS) $(LDLIBS)

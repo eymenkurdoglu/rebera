@@ -289,12 +289,8 @@ void v4l2capture::uninit_device( void ) {
     free(buffers);
 }
 
-void v4l2capture::process_image( const void *p, unsigned int size ) {
-
-	//~ uint8_t* pY = buff;
-	//~ uint8_t* pCb = pY + i_pixels;
-	//~ uint8_t* pCr = pCb + (i_pixels>>2);
-
+void v4l2capture::process_image( const void *p, unsigned int size )
+{
 	unsigned int n = 0;
 	uint8_t* pCurr = (uint8_t*)p;
 	int halfwidth = i_width>>1;
@@ -311,15 +307,7 @@ void v4l2capture::process_image( const void *p, unsigned int size ) {
 			pCr[n] = (uint8_t) ((pHO2[3] + pHO2[2*i_width+3] + 1)>>1);
 		}
 	}
-
-    SDL_UpdateTexture(texture, NULL, pY, i_width);
-    SDL_RenderClear(renderer);
-    SDL_RenderCopy(renderer, texture, NULL, NULL);
-    SDL_RenderPresent(renderer);
-
-	//~ if ( out_buf ) {
-		//~ fwrite(pY, 1, (i_pixels*3)>>1, stdout);
-	//~ }
+	//display_raw();
 }
 
 void v4l2capture::init_sdl2( void ) {

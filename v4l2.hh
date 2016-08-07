@@ -4,7 +4,6 @@
 #define CLEAR(x) memset(&(x), 0, sizeof(x))
 
 #include <SDL2/SDL.h>
-#include "encoder.hh"
 #include <unistd.h> // for usleep
 
 struct buffer {
@@ -54,13 +53,17 @@ class v4l2capture {
 	void close_device( void );
 	void init_mmap( void );
 	void init_sdl2( void );
-	void set_picbuff( x264encoder* encoder ) {
-		//~ printf("..");
-		//~ delete pY;
-		//~ printf("++");
-		pY  = encoder->get_Ybuff();
-		pCb = encoder->get_Cbbuff();
-		pCr = encoder->get_Crbuff();
+	void set_picbuff( uint8_t* _Ybuf_, uint8_t* _Cbbuf_, uint8_t* _Crbuf_ )
+	{
+		pY  = _Ybuf_;
+		pCb = _Cbbuf_;
+		pCr = _Crbuf_;
+	};
+	void display_raw( void ) {
+		SDL_UpdateTexture(texture, NULL, pY, i_width);
+		SDL_RenderClear(renderer);
+		SDL_RenderCopy(renderer, texture, NULL, NULL);
+		SDL_RenderPresent(renderer);
 	};
 };
 

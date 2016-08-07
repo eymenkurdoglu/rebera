@@ -111,29 +111,42 @@ return dhat0;
 }
 
 /* update the a priori prediction error estimates */
-double Predictor::fiveperc( double new_value )
+double Predictor::running_percentile( double num, double den )
 {
-	if ( errors.size() == RBR_RUNNING_PERC_LEN )
-		errors.pop_front();
-	errors.push_back( new_value );
+	if ( den == 0 )
+	{
+		printf("[RBR] divison by zero @running_percentile\n");
+	}
+	else
+	{	
+		double new_value = num / den;
+		
+		/* push back the new data point */
+		if ( errors.size() == RBR_RUNNING_PERC_LEN )
+			errors.pop_front();
+		errors.push_back( new_value );
 
-	if ( errors.size() == 1 )
-		return *(errors.begin());
+		if ( errors.size() == 1 )
+		{
+			percentile = new_value;
+		}
+		else
+		{	
+			double pos = (errors.size() - 1) * RBR_RUNNING_PERC;
+			unsigned int ind = (unsigned int)pos;
+			double delta = pos - ind;
 
-	double pos = (errors.size() - 1) * RBR_RUNNING_PERC;
-	unsigned int ind = (unsigned int)pos;
-	double delta = pos - ind;
+			std::vector<double> w( errors.size() );
+			std::copy(errors.begin(), errors.end(), w.begin());
+			std::nth_element(w.begin(), w.begin() + ind, w.end());
 
-	std::vector<double> w( errors.size() );
-	std::copy(errors.begin(), errors.end(), w.begin());
-	std::nth_element(w.begin(), w.begin() + ind, w.end());
+			double i1 = *(w.begin() + ind);
+			double i2 = *std::min_element(w.begin() + ind + 1, w.end());
 
-	double i1 = *(w.begin() + ind);
-	double i2 = *std::min_element(w.begin() + ind + 1, w.end());
-
-	fivepercerror = i1 * (1.0 - delta) + i2 * delta;
-
-return fivepercerror;
+			percentile = i1 * (1.0 - delta) + i2 * delta;
+		}
+	}
+return percentile > 1 ? 1 : percentile;
 }
 
 double Predictor::update( double new_val ) {
@@ -141,5 +154,5 @@ double Predictor::update( double new_val ) {
 	forecast = rls->update( new_val );
 	if ( step++ < RBR_START_RLS ) forecast = new_val;
 
-return forecast;
+return forecast > 0 ? forecast : 0;
 }
