@@ -1,6 +1,6 @@
 #include "videostate.hh"
 
-ReberaVideo::ReberaVideo( void )
+ReberaDecoder::ReberaDecoder( void )
 : m_bRunning( true )
 , m_PictureQCond( SDL_CreateCond() )
 , m_PictureQMutex( SDL_CreateMutex() )
@@ -13,10 +13,10 @@ ReberaVideo::ReberaVideo( void )
 		fprintf( stderr, "> avcodec_open2 failed\n" );
 		exit( EXIT_FAILURE );
 	}
-	m_pAVPacketQ = new ReberaVideo::AVPacketQueue( (ReberaVideo*)this );
+	m_pAVPacketQ = new ReberaDecoder::AVPacketQueue( (ReberaDecoder*)this );
 }
 
-ReberaVideo::~ReberaVideo(void)
+ReberaDecoder::~ReberaDecoder(void)
 {
 	delete m_pAVPacketQ;
 	av_frame_free( &FFmpeg_avframe );
@@ -26,7 +26,7 @@ ReberaVideo::~ReberaVideo(void)
 	av_free( m_pFFmpeg_avcodeccontxt );
 }
 
-ReberaVideo::AVPacketQueue::AVPacketQueue( ReberaVideo* _video_ )
+ReberaDecoder::AVPacketQueue::AVPacketQueue( ReberaDecoder* _video_ )
 : ffmpeg_avpacketlist_head( NULL )
 , ffmpeg_avpacketlist_rear( NULL )
 , m_nPackets( 0 )
@@ -36,13 +36,13 @@ ReberaVideo::AVPacketQueue::AVPacketQueue( ReberaVideo* _video_ )
 , m_pVideoState( _video_ )
 {}
 
-ReberaVideo::AVPacketQueue::~AVPacketQueue(void)
+ReberaDecoder::AVPacketQueue::~AVPacketQueue(void)
 {
 	SDL_DestroyCond( m_pCond );
 	SDL_DestroyMutex( m_pMutex );
 }
 
-int ReberaVideo::AVPacketQueue::GetAVPacket( AVPacket* pAVPacket ) {
+int ReberaDecoder::AVPacketQueue::GetAVPacket( AVPacket* pAVPacket ) {
 
 SDL_LockMutex( m_pMutex );
 for (;;)
@@ -76,7 +76,7 @@ SDL_UnlockMutex( m_pMutex );
 return pAVPacket->size;
 }
 
-void ReberaVideo::AVPacketQueue::PutAVPacket( AVPacket* pPacket ) {
+void ReberaDecoder::AVPacketQueue::PutAVPacket( AVPacket* pPacket ) {
 
 	AVPacketList* newAVPacketList = (AVPacketList*)av_malloc( sizeof(AVPacketList) );
 
@@ -95,7 +95,7 @@ void ReberaVideo::AVPacketQueue::PutAVPacket( AVPacket* pPacket ) {
 	SDL_UnlockMutex( m_pMutex );
 }
 
-void ReberaVideo::InitializeSDLWindow() {
+void ReberaDecoder::InitializeSDLWindow() {
 
 	fprintf( stderr, "> Video size = %dx%d\n", GetVideoWidth(), GetVideoHeight() );
 
@@ -110,7 +110,7 @@ void ReberaVideo::InitializeSDLWindow() {
 		fprintf( stderr, "Unable to create blank texture! SDL Error: %s\n", SDL_GetError() );
 }
 
-void ReberaVideo::refresh_display()
+void ReberaDecoder::refresh_display()
 {
 	AVFrame* pFrame = FFmpeg_avframe;
 	if ( 0 > SDL_UpdateYUVTexture(	GetSDLTexture(), NULL,
@@ -126,7 +126,7 @@ void ReberaVideo::refresh_display()
 	av_frame_unref( pFrame );
 }
 
-int ReberaVideo::decode_frame( AVPacket* _avpacket )
+int ReberaDecoder::decode_frame( AVPacket* _avpacket )
 {
 	int b_decoded = 0;
 	if ( _avpacket )

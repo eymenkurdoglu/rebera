@@ -16,7 +16,7 @@ extern "C" {
 #define RBR_MIN_ENCODING_RATE 300
 #define RBR_MAX_ENCODING_RATE 3000
 
-class x264encoder {
+class ReberaEncoder {
 
 	private:
 
@@ -54,8 +54,8 @@ class x264encoder {
     int i_enc_frame = 0;
     
 
-	x264encoder( int, int );
-	~x264encoder();
+	ReberaEncoder( int, int );
+	~ReberaEncoder();
 	
 	int get_frame( void );
 	int compress_frame( void );

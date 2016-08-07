@@ -1,6 +1,6 @@
 #include "receiverstate.hh"
 
-ReberaReceiver::ReberaReceiver( ReberaVideo* _video_state, const char* _ack_if_ )
+ReberaReceiver::ReberaReceiver( ReberaDecoder* _video_state, const char* _ack_if_ )
 : m_measuredbyte( 0 )
 , m_measuredtime( 0 )
 , m_pVideoState( _video_state )

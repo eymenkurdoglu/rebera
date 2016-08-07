@@ -35,30 +35,30 @@ int main( int argc, char* argv[] )
 	SDL_Init( SDL_INIT_VIDEO | SDL_INIT_TIMER );
 
 	char* ack_if = NULL; if ( argc > 1 ) ack_if = argv[1];
-	ReberaVideo 	video;
-	ReberaReceiver 	receiver( &video, ack_if );
+	ReberaDecoder 	decoder;
+	ReberaReceiver 	receiver( &decoder, ack_if );
 
-FILE* pFile = fopen( "/home/eymen/Desktop/receiver_packets.txt", "w" );
+	FILE* pFile = fopen( "/home/eymen/Desktop/receiver_packets.txt", "w" );
 
 	Select &sel = Select::get_instance();
 	sel.add_fd( receiver.sink_sock.get_sock() );
 	uint64_t start_time = GetTimeNow(), next_feedback_time = 0;
 
-	while ( video.IsRunning() )
+	while ( decoder.IsRunning() )
 	{
 		SDL_Event evt;
 		while( SDL_PollEvent( &evt ) ) // Returns 1 if there is a pending event or 0 if there are none.
 		{
 			switch( evt.type ) {
 			case SDL_QUIT :
-				video.SetQuitFlag();
+				decoder.SetQuitFlag();
 				SDL_Quit();
 				goto _EXIT;
 			case RBR_INITWND :
-				video.InitializeSDLWindow();
+				decoder.InitializeSDLWindow();
 				break;
 			case RBR_UPDATEYUV :
-				video.refresh_display();
+				decoder.refresh_display();
 				break;
 			default:
 				break;
@@ -95,12 +95,12 @@ FILE* pFile = fopen( "/home/eymen/Desktop/receiver_packets.txt", "w" );
 			receiver.bytes_received += incoming.payload.size()+RBR_NETWORK_STACK_HEADER;
 			receiver.bytes_lost = h->sentsofar-receiver.bytes_received;
 
-			/* place the video data in the decoding buffer */
+			/* place the decoder data in the decoding buffer */
 			receiver.place_in_buffer( contents, arriving_time );
 
 			/* if a frame is complete, decode and display it */
-			if ( video.decode_frame( receiver.check_and_queue() ) )
-				video.refresh_display();
+			if ( decoder.decode_frame( receiver.check_and_queue() ) )
+				decoder.refresh_display();
 		}
 		else /* time to send the next feedback packet */
 		{

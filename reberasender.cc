@@ -28,19 +28,16 @@ static void sigint_handler( int a )
 int main ( int argc, char* argv[] )
 {
 	if ( argc != 3 ) {
-		printf("Usage: %s [REMOTE_IP] [INTERFACE]", argv[0]);
+		printf("Usage: %s [REMOTE_IPv4] [INTERFACE]", argv[0]);
 		return -1;
 	}
 	
 	signal( SIGINT, sigint_handler );
-
-	//uint64_t start = 0;
-	SDL_Event evt;
 	
 	char device[] = "/dev/video1"; // TODO: present options to the user
 	v4l2capture vidcap( device );
 	
-	x264encoder encoder( vidcap.get_width(), vidcap.get_height() );
+	ReberaEncoder encoder( vidcap.get_width(), vidcap.get_height() );
 	encoder.attach_camera( &vidcap );
 	encoder.reduce_fr_by( 1 );
 	
@@ -59,6 +56,7 @@ int main ( int argc, char* argv[] )
 
 	while ( !b_ctrl_c )
 	{
+		SDL_Event evt;
 		while( SDL_PollEvent( &evt ) ) // Returns 1 if there is a pending event or 0 if there are none.
 		{
 			switch( evt.type ) {
@@ -70,8 +68,6 @@ int main ( int argc, char* argv[] )
 			}
 		}
 
-		//if ( !start ) start = GetTimeNow();
-
 		if ( !b_ctrl_c ) sel.select( -1 );
 
 		if ( sel.read( sender.socket.get_sock() ) ) /* incoming feedback packet awaiting */
@@ -79,14 +75,12 @@ int main ( int argc, char* argv[] )
 			Socket::Packet incoming( sender.socket.recv() );
 			Packet::FbHeader* h = (Packet::FbHeader*)incoming.payload.data();
 
-			//if ( h->measuredtime > 100 || ( h->measuredbyte == 0 && h->measuredtime == 0 ) )
-			//{
+			if ( h->measuredtime > 100 || ( h->measuredbyte == 0 && h->measuredtime == 0 ) )
+			{
 				sender.set_fb_time( GetTimeNow() );
 				sender.set_B( static_cast<double>(h->measuredbyte) ); // in bytes
 				sender.set_T( static_cast<double>(h->measuredtime) ); // in microseconds
-			//}
-			
-			//printf( "T = %lu, B = %lu \n", h->measuredtime, h->measuredbyte );
+			}
 
 			if ( (uint32_t)(h->bytes_rcvd) > sender.get_bytes_recv() )
 				sender.set_bytes_recv( (uint32_t)(h->bytes_rcvd) );

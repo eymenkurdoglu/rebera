@@ -41,9 +41,9 @@ int main ( int argc, char* argv[] )
 	uint64_t start = 0, next = 0, now = 0;
 	int i_frame_count = 0, fps = 30;
 
-	x264encoder encode( 352, 288 );
+	ReberaEncoder encode( 352, 288 );
 	encode.attach_file( fopen( "CREW_352x288_30.yuv", "rb" ) );
-	//x264encoder encode( 704, 576, fopen( "CREW_704x576_30.yuv", "rb" ) );
+	//ReberaEncoder encode( 704, 576, fopen( "CREW_704x576_30.yuv", "rb" ) );
 
 	SenderState sender( argv[1], argv[2], argv[3] );
 

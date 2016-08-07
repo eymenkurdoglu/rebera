@@ -28,7 +28,7 @@ typedef struct {
 	Sint32 		 bAllocated;
 } VideoPicture;
 
-class ReberaVideo {
+class ReberaDecoder {
 
 private:
 
@@ -46,10 +46,10 @@ public:
 		unsigned	  m_nSize;
 		SDL_cond*	  m_pCond;
 		SDL_mutex*	  m_pMutex;
-		ReberaVideo*   m_pVideoState;
+		ReberaDecoder*   m_pVideoState;
 
 	public:
-		AVPacketQueue( ReberaVideo* );
+		AVPacketQueue( ReberaDecoder* );
 		~AVPacketQueue(void);
 
 		int  	 GetAVPacket( AVPacket* );
@@ -76,8 +76,8 @@ public:
 	AVPacketQueue*      m_pAVPacketQ;
 	VideoPicture        m_PictureQ[VIDEO_PICTURE_QUEUE_SIZE];
 
-    ReberaVideo( void );
-   ~ReberaVideo( void );
+    ReberaDecoder( void );
+   ~ReberaDecoder( void );
 
     VideoPicture* 	 GetPictRead () 		{ return &m_PictureQ[PictureQReadIndex]; };
     VideoPicture* 	 GetPictWrite() 		{ return &m_PictureQ[PictureQWriteIndex]; };

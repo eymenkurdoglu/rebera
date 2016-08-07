@@ -64,7 +64,7 @@ private:
 	uint64_t m_measuredbyte, m_measuredtime, m_streamstart;
 	uint64_t B[RBR_FB_PER_IPER], T[RBR_FB_PER_IPER];
 
-	ReberaVideo* m_pVideoState;
+	ReberaDecoder* m_pVideoState;
 
 	Socket::Address m_remote_addr;
 
@@ -85,7 +85,7 @@ public:
 
 public:
 
-	ReberaReceiver( ReberaVideo*, const char* );
+	ReberaReceiver( ReberaDecoder*, const char* );
 
 	void set_remote_addr( const Socket::Address & _remote_ ) { m_remote_addr = _remote_; };
 	void set_measured_byte( uint64_t b ) { m_measuredbyte = b; };
@@ -105,7 +105,7 @@ public:
 		return Packet::FbHeader( sumB, sumT, ++fb_seq_no, bytes_received, bytes_lost );
 	};
 	Socket::Address get_remote_addr( void ) const { return m_remote_addr; };
-	ReberaVideo* get_videostate( void ) const { return m_pVideoState; };
+	ReberaDecoder* get_videostate( void ) const { return m_pVideoState; };
 	uint64_t 	get_measured_byte( void ) const { return m_measuredbyte; };
 	uint64_t 	get_measured_time( void ) const { return m_measuredtime; };
 	uint64_t	get_stream_start_ts( void ) const { return m_streamstart; };

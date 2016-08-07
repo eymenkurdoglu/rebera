@@ -1,7 +1,7 @@
 #include "encoder.hh"
 #define RBR_READ_UNTIL 288
 
-x264encoder::x264encoder( int _width_, int _height_ )
+ReberaEncoder::ReberaEncoder( int _width_, int _height_ )
 {
 	x264_param_default_preset( &param, "veryfast", "zerolatency" );
 	
@@ -36,13 +36,13 @@ x264encoder::x264encoder( int _width_, int _height_ )
 	encoder = x264_encoder_open( &param );	
 }
 
-x264encoder::~x264encoder() {
+ReberaEncoder::~ReberaEncoder() {
 	x264_encoder_close( encoder );
 	x264_picture_clean( &pic_in );
 }
 
 // TODO: what if read_frame or fread fails?
-int x264encoder::get_frame()
+int ReberaEncoder::get_frame()
 {
 	int will_encode = 0;
 	
@@ -96,12 +96,12 @@ int x264encoder::get_frame()
 return will_encode;
 }
 
-int x264encoder::compress_frame()
+int ReberaEncoder::compress_frame()
 {
 return x264_encoder_encode( encoder, &nal, &i_nal, &pic_in, &pic_out );
 }
 
-int x264encoder::change_bitrate( int _newbitrate_ )
+int ReberaEncoder::change_bitrate( int _newbitrate_ )
 {
 	_newbitrate_ = _newbitrate_ <= RBR_MIN_ENCODING_RATE ? RBR_MIN_ENCODING_RATE : ( _newbitrate_ >= RBR_MAX_ENCODING_RATE ? RBR_MAX_ENCODING_RATE : _newbitrate_ );
 	
