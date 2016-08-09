@@ -4,7 +4,7 @@ SenderState::SenderState( const char* _remote_IP_, const char* _video_if_, const
 : abs_start_time( GetTimeNow() )
 , remote_addr( _remote_IP_, 42000 )
 , rate_adapter( RBR_GOP, RBR_INTRAPERIOD, NULL )
-, oracle( 10, 0.99 )
+, oracle( 5, 1 )
 {
 	socket.bind_to_device( _video_if_ );
 	socket.bind( Socket::Address( "0.0.0.0", 42001 ) );
@@ -41,8 +41,10 @@ void SenderState::predict_next( void )
 		i_budget = i_budget > 0 ? i_budget : 0;
 	} 
 	
-	printf( "%.2f\tinput=%.0f\tpred=%.0f\tsafe=%.0f%%\tinqueue=%d\tbudget=%d\n",
-		(double)(GetTimeNow()-abs_start_time)/1000000, 8*d_measurement, 8*d_predicted, 100*d_margin, i_inqueue, i_budget );
+	printf( "intra-period %d\tinput=%.0f\tpred=%.0f\tsafe=%.0f%%\tinqueue=%d\tbudget=%d\n",
+		i_count, 8*d_measurement, 8*d_predicted, 100*d_margin, i_inqueue, i_budget );
+	
+	i_count++;
 };
 
 /* prevent deadlock when packets are thought to be in-queue but in fact they are lost */
@@ -89,6 +91,30 @@ void SenderState::send_frame( const char* buff, size_t u_framesize, int i_enc_fr
 		}
 	}
 };
+
+void SenderState::send_frame_cellsim( const char* buff, size_t u_framesize, int _framenum_ )
+{
+ Packet::Header header( static_cast<uint8_t>(u_framesize/u_maxpayload), _framenum_ );
+
+ /* send the dwarf packet first */
+ bytes_sent += (u_framesize%u_maxpayload)+u_fullheader;
+ socket.send( Socket::Packet( remote_addr, header.GetHeader( seq_num++, 0, bytes_sent )+std::string( buff, u_framesize%u_maxpayload ) ) );
+
+ //fprintf( pPacketLogFile, "%lu\t%u\t%u\t%d\n", GetTimeNow(), header.sequencenum, (unsigned)(u_framesize%u_maxpayload + u_fullheader), header.framenumber );
+
+ if ( header.numpackets )
+ {
+	 buff += u_framesize%u_maxpayload;
+	 for ( uint8_t i = 1; i <= header.numpackets; i++ )
+	 {
+		 bytes_sent += u_maxpayload+u_fullheader;
+		 socket.send( Socket::Packet( remote_addr, header.GetHeader( seq_num++, i, bytes_sent ) + std::string( buff, u_maxpayload ) ) );
+		 buff += u_maxpayload;
+		 //fprintf( pPacketLogFile, "%lu\t%u\t%u\t%d\n", GetTimeNow(), header.sequencenum, u_maxpayload + u_fullheader, header.framenumber );
+	 }
+ }
+};
+
 
 int SenderState::total_length( int _size_ ) {
 	_size_ += ((unsigned)(_size_/u_maxpayload)+1)*u_fullheader;

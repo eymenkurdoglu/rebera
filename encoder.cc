@@ -1,5 +1,6 @@
 #include "encoder.hh"
 #define RBR_READ_UNTIL 288
+#define RBR_BUFFER_SIZE_COEFF 5
 
 ReberaEncoder::ReberaEncoder( int _width_, int _height_ )
 {
@@ -11,19 +12,21 @@ ReberaEncoder::ReberaEncoder( int _width_, int _height_ )
     param.i_threads 	= 1;
 	param.i_width 		= _width_;
 	param.i_height 		= _height_;
+	param.i_fps_den 	= 1;
+	param.i_fps_num 	= 30;
 	u_luma_size 		= param.i_width * param.i_height; // set for each frame in case SR changes
 	u_chroma_size 		= u_luma_size / 4; // set for each frame in case SR changes
 	
 	/* Intra refresh */
-	param.i_keyint_max 			= RBR_INTRAPERIOD;
+	param.i_keyint_max 			= 32;
 	param.i_frame_reference 	= RBR_MAX_NUM_REF;
 	param.i_scenecut_threshold 	= 0;
 	
 	/* Rate control */
 	param.rc.i_rc_method = X264_RC_ABR;
-	param.rc.i_bitrate = RBR_INIT_BITRATE;
-	param.rc.i_vbv_max_bitrate = RBR_INIT_BITRATE;
-	param.rc.i_vbv_buffer_size = param.rc.i_bitrate/10;
+	param.rc.i_bitrate = 120;
+	param.rc.i_vbv_max_bitrate = 120;
+	param.rc.i_vbv_buffer_size = param.rc.i_bitrate/RBR_BUFFER_SIZE_COEFF;
 	
 	/* For streaming */
 	param.b_repeat_headers = 1;
@@ -74,22 +77,31 @@ int ReberaEncoder::get_frame()
 			vidcap->display_raw();
 		
 		/* check if a new intra-period should start */
-		if ( i_enc_frame - i_last_idr > i_ipr - 1 )
+		if ( i_enc_frame - i_last_idr > i_ipr - 1 ) {
+			
+			/* this is a new IDR */
 			i_last_idr = i_enc_frame;
+			
+			/* has the FR changed? if so, set a new intra-period */
+			if ( d_fr >= 22.5 && d_fr <= 45 )
+				i_ipr = (int)(d_ipr * 30);
+			else if ( d_fr >= 12.25 && d_fr <= 22.5 )
+				i_ipr = (int)(d_ipr * 15);
+				
+			printf("[RBR] IPR=%d ",i_ipr);
+		}
 		
 		i_frame_index = i_enc_frame - i_last_idr;
 		
-		//i_enc_frame++;
-		
-		/* //TO BE ABLE TO CHANGE FR 
+		//TO BE ABLE TO CHANGE FR 
 		if ( !ul_raw_ts ) { 
 			ul_raw_ts = GetTimeNow();
 		} else {
-			ul_now = GetTimeNow();
-			d_interval = 0.9 * d_interval + 0.1 * 1e6 / ( ul_now - ul_raw_ts );
+			uint64_t ul_now = GetTimeNow();
+			d_interval = 0.9 * d_interval + 0.1 * ( ul_now - ul_raw_ts );
+			d_fr = 1e6/d_interval;
 			ul_raw_ts = ul_now;
-			printf("\x1b[1m\r> [RBR] FR=%2.1f\x1b[0m", d_interval);
-		} */
+		}
 	}
 	i_raw_frame++;
 
@@ -101,15 +113,17 @@ int ReberaEncoder::compress_frame()
 return x264_encoder_encode( encoder, &nal, &i_nal, &pic_in, &pic_out );
 }
 
-int ReberaEncoder::change_bitrate( int _newbitrate_ )
+int ReberaEncoder::change_bitrate( double _newbitrate_ )
 {
 	_newbitrate_ = _newbitrate_ <= RBR_MIN_ENCODING_RATE ? RBR_MIN_ENCODING_RATE : ( _newbitrate_ >= RBR_MAX_ENCODING_RATE ? RBR_MAX_ENCODING_RATE : _newbitrate_ );
-	
+	//printf("[RBR] target=%.2f\n", _newbitrate_);
 	x264_encoder_parameters( encoder, &param );
-
+	
+	_newbitrate_ = (int)_newbitrate_;
+	
 	param.rc.i_bitrate = _newbitrate_;
 	param.rc.i_vbv_max_bitrate = _newbitrate_;
-	param.rc.i_vbv_buffer_size = param.rc.i_bitrate/10;
+	param.rc.i_vbv_buffer_size = param.rc.i_bitrate/RBR_BUFFER_SIZE_COEFF;
 
 return x264_encoder_reconfig( encoder, &param );
 }

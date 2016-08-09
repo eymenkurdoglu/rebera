@@ -48,7 +48,7 @@ struct PartialFrame
     uint64_t lastarrival_ts;
 
     PartialFrame( Packet* p, uint64_t ts )
-    : i_num_packets( 1+p->header.numpackets )
+    : i_num_packets( 1 + p->header.numpackets )
     , i_frame_size( p->appdata.size() )
     , u_frame_num( p->header.framenumber )
     , lastarrival_ts( ts )

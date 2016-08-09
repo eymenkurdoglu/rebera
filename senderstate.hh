@@ -18,7 +18,6 @@
 #define RBR_INTRAPERIOD 32
 #define RBR_INIT_PRED 12
 #define RBR_MTU 1442
-#define RBR_FPS 30
 #define RBR_GOP 4
 #define RBR_INQUEUE_WNDW 4
 
@@ -55,6 +54,8 @@ private:
 	int 	i_budget;  // in bytes
 	
 	double d_ipr = 16.0/15;
+	
+	int i_count = 1;
 
 public:
 
@@ -77,8 +78,9 @@ public:
 	void init_rate_adapter( int );
 	int	 total_length( int );
 	void send_frame( const char*, size_t, int );
+	void send_frame_cellsim( const char*, size_t, int );
 	void set_inqueue( void );
-
+	
 	double 	get_B( void ) { return B; };
 	double 	get_T( void ) { return T; };
 	int	 	get_inqueue( void ) { return i_inqueue; };

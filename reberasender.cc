@@ -34,7 +34,7 @@ int main ( int argc, char* argv[] )
 	
 	signal( SIGINT, sigint_handler );
 	
-	char device[] = "/dev/video1"; // TODO: present options to the user
+	char device[] = "/dev/video0"; // TODO: present options to the user
 	v4l2capture vidcap( device );
 	
 	ReberaEncoder encoder( vidcap.get_width(), vidcap.get_height() );
