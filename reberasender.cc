@@ -4,6 +4,7 @@
 #include <unistd.h> // for usleep
 #include <cmath>
 #include <signal.h>
+#include <getopt.h>
 
 #include "socket.hh"
 #include "payload.hh"
@@ -25,39 +26,124 @@ static void sigint_handler( int a )
     b_ctrl_c = 1;
 }
 
+const char short_options[] = "d:s:i:a:y:f:w:h:l";
+
+const struct option long_options[] = {
+    { "device", required_argument, NULL, 'd' },
+    { "send", required_argument, NULL, 's' },
+    { "interface", required_argument, NULL, 'i' },
+    { "ackinter", required_argument, NULL, 'a' },
+    { "file", required_argument, NULL, 'y' },
+    { "listen", no_argument, NULL, 'l' },
+    { 0, 0, 0, 0 }
+};
+
+void usage(FILE *fp, int argc, char **argv)
+{
+    fprintf(fp,
+            "Usage: %s [options]\n\n"
+            "Options:\n"
+            "-d | --device name 	Video device name\n"
+            "-s | --ip address  	Remote host IPv4\n"
+            "-i | --interface   	Network interface\n"
+            "-a | --ACK interface   ACK interface\n"
+            "-y | --YUV path  		Path to YUV file\n"
+            "-f | --YUV fps   		Fps of YUV file\n"
+            "-w | --YUV width   	Width of YUV file\n"
+            "-h | --YUV height  	Height of YUV file\n"
+            "-l | 				    Listen for incoming\n"
+            "",
+            argv[0] );
+}
+
 int main ( int argc, char* argv[] )
 {
-	if ( argc != 3 ) {
-		printf("Usage: %s [REMOTE_IPv4] [INTERFACE]", argv[0]);
-		return -1;
-	}
-	
 	signal( SIGINT, sigint_handler );
+	const char* device = "/dev/video0", *remote_ipv4 = "0.0.0.0";
+    const char* interface = NULL, *ackinter = NULL;
+    int b_webcam = 1, fps = 0, w = 0, h = 0;
+    v4l2capture* vidcap = NULL;
+    FILE* yuvfile = NULL;  
+    
+    /* read the input arguments */
+    for (;;) {
+        int idx;
+        int c;
+        
+        c = getopt_long(argc, argv, short_options, long_options, &idx);
+        
+        if (-1 == c)
+            break;
+        
+        switch (c) {
+            case 0: /* getopt_long() flag */
+                break;
+                
+            case 'd':
+                device = optarg;
+                break;
+                
+            case 's':
+				remote_ipv4 = optarg;
+				break;
+				
+            case 'i':
+				interface = optarg;
+				break;
+				
+            case 'a':
+				ackinter = optarg;
+				break;	
+				
+            case 'y':
+				yuvfile = fopen( optarg, "rb" );
+				b_webcam = 0;
+				break;											
+
+            case 'f':
+				fps = atoi(optarg);
+				break;		
+                
+            case 'w':
+				w = atoi(optarg);
+				break;		                
+
+            case 'h':
+				h = atoi(optarg);
+				break;		
+				                
+            default:
+				usage(stderr, argc, argv);
+                exit(EXIT_FAILURE);
+        }
+    }	
 	
-	char device[] = "/dev/video0"; // TODO: present options to the user
-	v4l2capture vidcap( device );
-	
-	ReberaEncoder encoder( vidcap.get_width(), vidcap.get_height() );
-	encoder.attach_camera( &vidcap );
+	ReberaEncoder encoder;
 	encoder.reduce_fr_by( 1 );
 	
-	SenderState sender( argv[1], argv[2], NULL );
+	SenderState sender( remote_ipv4, interface, ackinter );
 	sender.set_ipr( encoder.get_ipr() );
-
-	/* start capturing */
-	vidcap.set_picbuff( encoder.get_Ybuff(), encoder.get_Cbbuff(), encoder.get_Crbuff() );
-	vidcap.start_capturing();
 
 	/* we catch events (arrival of acks, feedback packets, or new frames) using select */
 	Select &sel = Select::get_instance();
 	sel.add_fd( sender.socket.get_sock() );
 	sel.add_fd( sender.acksocket.get_sock() );
-	sel.add_fd( vidcap.get_fd() );
-
+	
+	if ( b_webcam ) {
+		vidcap = new v4l2capture( device );
+		encoder.attach_camera( vidcap );
+		vidcap->set_picbuff( encoder.get_Ybuff(), encoder.get_Cbbuff(), encoder.get_Crbuff() );
+		sel.add_fd( vidcap->get_fd() );
+		vidcap->start_capturing();		
+	} else {
+		encoder.attach_file( yuvfile, w, h );
+	}
+	
+	uint64_t start = 0, next = 0;
 	while ( !b_ctrl_c )
 	{
 		SDL_Event evt;
-		while( SDL_PollEvent( &evt ) ) // Returns 1 if there is a pending event or 0 if there are none.
+		while( SDL_PollEvent( &evt ) ) //Returns 1 if there's a pending event, 0 if there are none
 		{
 			switch( evt.type ) {
 				case SDL_QUIT :
@@ -67,8 +153,17 @@ int main ( int argc, char* argv[] )
 					break;
 			}
 		}
-
-		if ( !b_ctrl_c ) sel.select( -1 );
+		
+		if ( b_webcam )
+		{
+			sel.select( -1 );
+		}
+		else
+		{
+			uint64_t now = GetTimeNow();
+			if ( !start ) start = now;
+			sel.select( start + next >= now ? start + next - now : 0 );
+		}
 
 		if ( sel.read( sender.socket.get_sock() ) ) /* incoming feedback packet awaiting */
 		{
@@ -117,11 +212,12 @@ int main ( int argc, char* argv[] )
 					sender.send_frame( frame.data(), i_frame_size, encoder.i_enc_frame );
 				}
 				encoder.i_enc_frame++;
+				if ( !b_webcam ) next = (1000000/fps) * encoder.i_enc_frame;
 			}
 		}
 	}
 EXIT:
-	vidcap.stop_capturing();
+	if ( b_webcam ) vidcap->stop_capturing();
 
 return 0;
 }

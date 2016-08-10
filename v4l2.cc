@@ -23,7 +23,7 @@ POSIX specification defines that when signal (such as Ctrl+C) is caught, the blo
 return r;
 }
 
-v4l2capture::v4l2capture( char* device )
+v4l2capture::v4l2capture( char const * device )
 : dev_name( device )
 , fd( -1 )
 , buffers( NULL )

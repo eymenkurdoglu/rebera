@@ -48,15 +48,23 @@ class ReberaEncoder {
     int i_raw_frame = 0;
     int i_enc_frame = 0;
 
-	ReberaEncoder( int, int );
+	ReberaEncoder( void );
 	~ReberaEncoder();
 	
 	int get_frame( void );
 	int compress_frame( void );
 	int change_bitrate( double );
+	void finalize_init( int, int );
 	
-	void attach_file ( FILE* _file_ ) { readfrom = _file_; vidcap = NULL; };
-	void attach_camera ( v4l2capture* _dev_ ) { vidcap = _dev_; readfrom = NULL; };
+	void attach_file ( FILE* _file_, int w, int h ) {
+		readfrom = _file_; vidcap = NULL;
+		finalize_init( w, h );
+	};
+	void attach_camera ( v4l2capture* _dev_ ) { 
+		vidcap = _dev_; readfrom = NULL;
+		finalize_init( vidcap->get_width(), vidcap->get_height() );
+	};
+		
 	void reduce_fr_by( int _trim_ ) { i_trim = _trim_; };
 	int get_frame_index( void ) { return i_frame_index; };
 	double get_ipr( void ) { return d_ipr; };

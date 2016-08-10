@@ -15,7 +15,7 @@ class v4l2capture {
 
 	private:
 
-	char* dev_name;
+	char const * dev_name;
 	int fd;
 	struct buffer* buffers;
 	unsigned n_buffers;
@@ -36,7 +36,7 @@ class v4l2capture {
 
 	public:
 
-	v4l2capture( char* );
+	v4l2capture( char const * );
 	~v4l2capture( void );
 	int xioctl( int, int, void* );
 	int read_frame( void );

@@ -6,7 +6,7 @@
 common_obj=socket.o util.o select.o
 sender_obj=dfs.o encoder.o senderstate.o v4l2.o
 receiver_obj=videostate.o receiverstate.o
-executables=rbr-send rbr-recv rbr-yuvsend
+executables=rebera rbr-recv
 x264_dir=$(HOME)/Source/x264
 dest = bin/
 
@@ -45,8 +45,8 @@ encoder.o : encoder.cc encoder.hh
 v4l2.o : v4l2.cc v4l2.hh encoder.cc encoder.hh
 	$(CXX) $(CXXFLAGS) -c v4l2.cc $(LDFLAGS)
 
-rbr-send : reberasender.cc senderstate.hh encoder.hh v4l2.hh dfs.hh socket.hh payload.hh util.hh select.h
-	$(CXX) $(CXXFLAGS) -o rbr-send reberasender.cc $(common_obj) $(sender_obj) $(LDFLAGS) $(LDLIBS)
+rebera : reberasender.cc senderstate.hh encoder.hh v4l2.hh dfs.hh socket.hh payload.hh util.hh select.h
+	$(CXX) $(CXXFLAGS) -o rebera reberasender.cc $(common_obj) $(sender_obj) $(LDFLAGS) $(LDLIBS)
 
 rbr-recv : reberareceiver.cc receiverstate.hh videostate.hh socket.hh payload.hh util.hh select.h
 	$(CXX) $(CXXFLAGS) -o rbr-recv reberareceiver.cc $(common_obj) $(receiver_obj) $(LDFLAGS) $(LDLIBS)

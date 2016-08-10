@@ -57,7 +57,7 @@ int main ( int argc, char* argv[] )
 		if ( !start ) start = now;
 		uint64_t waiting_time = start + next >= now ? start + next - now : 0;
 
-		sel.select( waiting_time );
+		if ( !b_ctrl_c ) sel.select( waiting_time );
 
 		if ( sel.read( sender.socket.get_sock() ) )
 		{

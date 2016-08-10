@@ -2,7 +2,7 @@
 #define RBR_READ_UNTIL 288
 #define RBR_BUFFER_SIZE_COEFF 5
 
-ReberaEncoder::ReberaEncoder( int _width_, int _height_ )
+ReberaEncoder::ReberaEncoder( void )
 {
 	x264_param_default_preset( &param, "veryfast", "zerolatency" );
 	
@@ -10,12 +10,8 @@ ReberaEncoder::ReberaEncoder( int _width_, int _height_ )
     param.i_csp 		= X264_CSP_I420;
     param.b_vfr_input 	= 0;
     param.i_threads 	= 1;
-	param.i_width 		= _width_;
-	param.i_height 		= _height_;
 	param.i_fps_den 	= 1;
 	param.i_fps_num 	= 30;
-	u_luma_size 		= param.i_width * param.i_height; // set for each frame in case SR changes
-	u_chroma_size 		= u_luma_size / 4; // set for each frame in case SR changes
 	
 	/* Intra refresh */
 	param.i_keyint_max 			= 32;
@@ -34,10 +30,19 @@ ReberaEncoder::ReberaEncoder( int _width_, int _height_ )
 	//param.i_log_level = X264_LOG_DEBUG;
 	
     /* Apply profile restrictions. */
-    x264_param_apply_profile( &param, "high" );
-	x264_picture_alloc( &pic_in, param.i_csp, param.i_width, param.i_height );
-	encoder = x264_encoder_open( &param );	
+    //x264_param_apply_profile( &param, "high" );
+	//encoder = x264_encoder_open( &param );	
 }
+
+void ReberaEncoder::finalize_init( int w, int h ) {
+		param.i_width 		= w;
+		param.i_height 		= h;
+		u_luma_size 		= param.i_width * param.i_height; // set for each frame in case SR changes
+		u_chroma_size 		= u_luma_size / 4; // set for each frame in case SR changes
+		x264_picture_alloc( &pic_in, param.i_csp, param.i_width, param.i_height ); 
+		x264_param_apply_profile( &param, "high" );
+		encoder = x264_encoder_open( &param );
+}	
 
 ReberaEncoder::~ReberaEncoder() {
 	x264_encoder_close( encoder );
@@ -93,7 +98,7 @@ int ReberaEncoder::get_frame()
 		
 		i_frame_index = i_enc_frame - i_last_idr;
 		
-		//TO BE ABLE TO CHANGE FR 
+		//TODO: when reading from file don't run this
 		if ( !ul_raw_ts ) { 
 			ul_raw_ts = GetTimeNow();
 		} else {

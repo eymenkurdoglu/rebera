@@ -1,12 +1,14 @@
 #include "senderstate.hh"
 
-SenderState::SenderState( const char* _remote_IP_, const char* _video_if_, const char* _ack_if_ )
+SenderState::SenderState( char const* _remote_IP_, char const* _video_if_, const char* _ack_if_ )
 : abs_start_time( GetTimeNow() )
 , remote_addr( _remote_IP_, 42000 )
 , rate_adapter( RBR_GOP, RBR_INTRAPERIOD, NULL )
 , oracle( 5, 1 )
 {
-	socket.bind_to_device( _video_if_ );
+	if ( _video_if_ )
+		socket.bind_to_device( _video_if_ );
+	
 	socket.bind( Socket::Address( "0.0.0.0", 42001 ) );
 	
 	if ( _ack_if_ ) { /* (experimental) if we want acks */
